@@ -13,33 +13,30 @@ const isorgselectionroute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-const {userId, orgId} = await auth();
+    const { userId, orgId, redirectToSignIn } = await auth();
 
-// Allow Public routes
-if (isPublicRoute(req)) {
+    // Allow Public routes
+    if (isPublicRoute(req)) {
+        return NextResponse.next();
+    }
+
+    // Protect non-public routes
+    if (!userId) {
+        return redirectToSignIn();
+    }
+
+    // Allow org selection route
+    if (isorgselectionroute(req)) {
+        return NextResponse.next();
+    }
+
+    // For all protected routes, ensure org is selected 
+    if (userId && !orgId) {
+        const orgSelection = new URL("/org-selection", req.url);
+        return NextResponse.redirect(orgSelection);
+    }
+
     return NextResponse.next();
-}
-
-// Protect non-public routes
-if (!userId) {
-    return auth.protect();
-}
-
-// Allow org selection route
-if (isorgselectionroute(req)) {
-    return NextResponse.next();
-}
-
-// For all protected routes, ensure org is selected 
-if (userId && !orgId) {
-    const orgSelection= new URL("/org-selection", req.url);
-    return NextResponse.redirect(orgSelection);
-}
-
-return NextResponse.next();
-
-
-
 });
 export const config = {
     matcher: [
